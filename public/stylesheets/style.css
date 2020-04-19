@@ -1,0 +1,29 @@
+video#stream {
+  width: 100%;
+  height: auto;
+  max-height: calc(100vh - 64px);
+}
+
+div#chat {
+  height: calc(100vh - 64px);
+  overflow-y: auto;
+}
+
+.message-list-container {
+  overflow: auto;
+  display: flex;
+  flex-direction: column-reverse;
+  height: 100%;
+}
+
+.message-text {
+  background: #eee;
+  padding: 0.25em 0.75em;
+  margin: 0.25em 0;
+  border-radius: 8px;
+  width: calc(100% - 5em);
+}
+
+.message-text + .message-username {
+  margin-top: 0.5em;
+}
