@@ -213,7 +213,7 @@ block content
     var typingUsers = [];
 
     function updateTypingUsers() {
-      var userList = typingUsers.length > 2 ? typingUsers[0] + ', ' + typingUsers[1] + 'and others' : typingUsers.join(' and ');
+      var userList = typingUsers.length > 2 ? typingUsers[0] + ', ' + typingUsers[1] + ' and others' : typingUsers.join(' and ');
       document.querySelector('#typing-users').innerHTML = typingUsers.length  === 0 ? '' : (userList + (typingUsers.length === 1 ? ' is ' : ' are ') + 'typing');
     }
 
