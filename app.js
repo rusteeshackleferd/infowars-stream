@@ -4,6 +4,7 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var indexRouter = require('./routes/index');
+var sslRedirect = require(‘heroku-ssl-redirect’);
 
 var app = express();
 
@@ -16,12 +17,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(function(request, response){
-  if(request.protocol === 'http'){
-    response.redirect("https://" + request.headers.host + request.url);
-  }
-});
-
+app.use(sslRedirect());
 app.use('/', indexRouter);
 
 // catch 404 and forward to error handler
