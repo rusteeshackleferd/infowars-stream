@@ -87,12 +87,12 @@ block content
       var messageList = document.querySelector('.message-list');
       if (lastMessage == null || (lastMessage.username !== message.username) || (message.createdAt - lastMessage.createdAt >= 600000)) {
         var usernameDiv = document.createElement('div');
-        usernameDiv.className = 'message-username mdc-typography--subtitle2';
+        usernameDiv.className = 'message-username mdc-typography--subtitle2' + (message.username === username ? ' my-message' : '');
         usernameDiv.appendChild(document.createTextNode(message.username));
         messageList.appendChild(usernameDiv);
       }
       var messageDiv = document.createElement('div');
-      messageDiv.className = 'message-text mdc-typography--body2';
+      messageDiv.className = 'message-text mdc-typography--body2' + (message.username === username ? ' my-message' : '');
       messageDiv.setAttribute('title', Date(message.createdAt).toLocaleString());
       messageDiv.appendChild(document.createTextNode(message.content));
       messageList.appendChild(messageDiv);

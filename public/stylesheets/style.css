@@ -47,6 +47,14 @@ div#chat {
   width: calc(100% - 5em);
 }
 
+.my-message {
+  margin-left: 3.5em;
+}
+
+.message-username.my-message {
+  text-align: right;
+}
+
 .message-text + .message-username {
   margin-top: 0.5em;
 }
