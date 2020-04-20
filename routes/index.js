@@ -10,9 +10,7 @@ router.get('/', async(req, res, next) => {
   let channelInfo = JSON.parse(channel_page.querySelector('#__NEXT_DATA__').rawText);
   let channelId = channelInfo.props.pageProps.channel._id;
   let streamUrl = channelInfo.props.pageProps.channel.liveStreamVideo.streamUrl;
-  console.log(channelId);
-  console.log(streamUrl);
-  res.render('index', { title: 'Infowars Feed', channelId, streamUrl });
+  res.render('index', { title: 'Data Skirmish - Ad-lite, Reality Adjacent', channelId, streamUrl });
 });
 
 module.exports = router;

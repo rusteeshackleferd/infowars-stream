@@ -9,7 +9,48 @@ block content
         div#chat
           div.message-list-container
             div.message-list
-          div.message-input
+          div#chat-login
+            button.mdc-button.mdc-button--raised
+              div.mdc-button__ripple
+              span.mdc-button__label Login to chat
+          div#message-input
+            label#chat-input.mdc-text-field.mdc-text-field--textarea
+              div.mdc-text-field-character-counter 0 / 200
+              textarea.mdc-text-field__input(aria-labelledby="my-label-id", aria-controls="my-helper-id", aria-describedby="my-helper-id", rows="2", maxlength="200")
+              span.mdc-notched-outline
+                span.mdc-notched-outline__leading
+                span.mdc-notched-outline__notch
+                  span#my-label-id.mdc-floating-label Send a message
+                span.mdc-notched-outline__trailing
+            div#typing-users.mdc-typography--caption
+  div#sign-in-dialog.mdc-dialog
+    div.mdc-dialog__container
+      div.mdc-dialog__surface(role="alertdialog", aria-modal="true", aria-labelledby="my-dialog-title", aria-describedby="my-dialog-content")
+        h2#my-dialog-title.mdc-dialog__title Sign in to Banned.video
+        div#my-dialog-content.mdc-dialog__content
+          label#email-input.mdc-text-field.mdc-text-field--outlined
+            input.mdc-text-field__input(type="text", aria-labelledby="email-label")
+            span.mdc-notched-outline
+              span.mdc-notched-outline__leading
+              span.mdc-notched-outline__notch
+                span#email-label.mdc-floating-label Email
+              span.mdc-notched-outline__trailing
+          label#password-input.mdc-text-field.mdc-text-field--outlined
+            input.mdc-text-field__input(type="password", aria-labelledby="password-label")
+            span.mdc-notched-outline
+              span.mdc-notched-outline__leading
+              span.mdc-notched-outline__notch
+                span#password-label.mdc-floating-label Password
+              span.mdc-notched-outline__trailing
+        footer.mdc-dialog__actions
+          button.mdc-button.mdc-dialog__button(data-mdc-dialog-action="cancel")
+            div.mdc-button__ripple
+            span.mdc-button__label Cancel
+          button.mdc-button.mdc-dialog__button(data-mdc-dialog-action="signin")
+            div.mdc-button__ripple
+            span.mdc-button__label Sign In
+    div.mdc-dialog__scrim
+
   script.
     var video = document.getElementById('stream');
     var videoSrc = '#{streamUrl}';
@@ -33,41 +74,163 @@ block content
       });
     }
   script.
-    var lastMessage = null;
+    var lastMessage = null,
+        socket = null,
+        username = null;
+
+    function clearMessages() {
+      var messageList = document.querySelector('.message-list');
+      messageList.innerHTML = '';
+    }
+
     function addMessage(message) {
       var messageList = document.querySelector('.message-list');
       if (lastMessage == null || (lastMessage.username !== message.username) || (message.createdAt - lastMessage.createdAt >= 600000)) {
         var usernameDiv = document.createElement('div');
         usernameDiv.className = 'message-username mdc-typography--subtitle2';
-        usernameDiv.innerHTML = message.username;
+        usernameDiv.appendChild(document.createTextNode(message.username));
         messageList.appendChild(usernameDiv);
       }
       var messageDiv = document.createElement('div');
       messageDiv.className = 'message-text mdc-typography--body2';
-      messageDiv.innerHTML = message.content;
+      messageDiv.setAttribute('title', Date(message.createdAt).toLocaleString());
+      messageDiv.appendChild(document.createTextNode(message.content));
       messageList.appendChild(messageDiv);
       linkifyElement(messageDiv);
       lastMessage = message;
     }
 
-    var socket = io('https://chat.banned.video', { 'query': { 'token': null } });
-    socket.on('connect', function() {
-      socket.emit("join", { roomId: '#{channelId}' });
-    });
-    socket.on("message", function (data) {
-      addMessage(data);
-    });
-    socket.on("users_online", function (data) {
-      console.log("Got users_online: " + data);
-    });
-    socket.on("past_messages", function (data) {
-      for (var i = 0; i < data.length; i++) {
-        addMessage(data[i]);
+    function authToBannedVideo(username, password) {
+      return fetch('https://api.infowarsmedia.com/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(
+          {
+            "operationName": null,
+            "variables": {
+              "serviceName": "password",
+              "params": {
+                "user": {
+                  "email": username
+                },
+                "password": password
+              }
+            },
+            "query": "mutation ($serviceName: String!, $params: AuthenticateParamsInput!) { authenticate(serviceName: $serviceName, params: $params) { sessionId\n    tokens {\n      refreshToken\n      accessToken\n      __typename\n    }\n    __typename\n  }\n}\n"
+          }
+        )
+      })
+        .then(r => r.json())
+        .then(data => data.data.authenticate.tokens.accessToken);
+    }
+
+    function getUserInfo(token) {
+      return fetch('https://api.infowarsmedia.com/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify(
+          {
+            "operationName": "Me",
+            "variables": {},
+            "query": "query Me {\n me {\n username\n chatToken\n}\n}"
+          }
+        )
+      });
+    }
+
+    function connectChat(token) {
+      if (socket && socket.connected) {
+        socket.disconnect();
+      }
+      socket = io('https://chat.banned.video', { 'query': { 'token': token } });
+      socket.on('connect', function() {
+        socket.emit("join", { roomId: '#{channelId}' });
+      });
+      socket.on("message", function (data) {
+        addMessage(data);
+      });
+      socket.on("users_online", function (data) {
+        // console.log("Got users_online: " + data);
+      });
+      socket.on("past_messages", function (data) {
+        clearMessages();
+        for (var i = 0; i < data.length; i++) {
+          addMessage(data[i]);
+        }
+      });
+      socket.on("start_typing", function (data) {
+        typingUsers.push(data);
+        updateTypingUsers();
+      });
+      socket.on("end_typing", function (data) {
+        var userIdx = typingUsers.indexOf(data);
+        if (userIdx > -1) {
+          typingUsers.splice(userIdx, 1);
+        }
+        updateTypingUsers();
+      });
+    }
+
+    connectChat(null);
+
+    var alreadyTyping = false;
+
+    function sendMessage(message) {
+      if (message && message.length > 0) {
+        socket.emit("end_typing");
+        alreadyTyping = false;
+        socket.emit("message", { message: message });
+      }
+    }
+
+    var textField = new mdc.textField.MDCTextField(document.querySelector('#chat-input'));
+    var textArea = document.querySelector('#chat-input textarea');
+    textArea.addEventListener('keydown', function (e) {
+      if (e.keyCode == 13) {
+        e.preventDefault();
+        sendMessage(textField.value.toString());
+        textField.value = '';
       }
     });
-    socket.on("start_typing", function (data) {
-      console.log("Got start_typing: " + data);
+
+    textArea.addEventListener('input', function (e) {
+      if (textArea.value.length === 0 && alreadyTyping) {
+        socket.emit('end_typing');
+        alreadyTyping = false;
+      } else if (!alreadyTyping) {
+        alreadyTyping = true;
+        socket.emit('start_typing');
+      }
     });
-    socket.on("end_typing", function (data) {
-      console.log("Got end_typing: " + data);
+
+    var typingUsers = [];
+
+    function updateTypingUsers() {
+      var userList = typingUsers.length > 2 ? typingUsers[0] + ', ' + typingUsers[1] + 'and others' : typingUsers.join(' and ');
+      document.querySelector('#typing-users').innerHTML = typingUsers.length  === 0 ? '' : (userList + (typingUsers.length === 1 ? ' is ' : ' are ') + 'typing');
+    }
+
+    var signInDialog = new mdc.dialog.MDCDialog(document.querySelector('#sign-in-dialog'));
+    var emailInput = new mdc.textField.MDCTextField(document.querySelector('#email-input'));
+    var passwordInput = new mdc.textField.MDCTextField(document.querySelector('#password-input'));
+
+    signInDialog.listen('MDCDialog:closing', function(e) {
+      if (e.detail.action === 'signin') {
+        authToBannedVideo(emailInput.value, passwordInput.value)
+          .then(token => getUserInfo(token))
+          .then(r => r.json())
+          .then(data => { username = data.data.me.username; connectChat(data.data.me.chatToken); })
+          .then(function () { document.querySelector('#chat-login').style.display = 'none'; document.querySelector('#message-input').style.display = 'block'; });
+      }
     });
+
+    var signInButton = document.querySelector('#chat-login button');
+    new mdc.ripple.MDCRipple(signInButton);
+    signInButton.addEventListener('click', function () { signInDialog.open(); });
