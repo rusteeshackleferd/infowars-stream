@@ -4,7 +4,7 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var indexRouter = require('./routes/index');
-var sslRedirect = require(‘heroku-ssl-redirect’);
+var sslRedirect = require('heroku-ssl-redirect');
 
 var app = express();
 
