@@ -204,7 +204,7 @@ block content
       if (textArea.value.length === 0 && alreadyTyping) {
         socket.emit('end_typing');
         alreadyTyping = false;
-      } else if (!alreadyTyping) {
+      } else if (textArea.value.length > 0 && !alreadyTyping) {
         alreadyTyping = true;
         socket.emit('start_typing');
       }
