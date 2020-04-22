@@ -16,6 +16,10 @@ div#chat {
   height: calc(100% - 7.5em);
 }
 
+.message-list {
+  padding-right: 1em;
+}
+
 #message-input, #chat-login {
   margin-top: 1em;
   height: 6.5em;
@@ -57,4 +61,10 @@ div#chat {
 
 .message-text + .message-username {
   margin-top: 0.5em;
+}
+
+.footer {
+  bottom: 5px;
+  left: 5px;
+  position: fixed;
 }
